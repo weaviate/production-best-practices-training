@@ -35,6 +35,23 @@ for *your exact version* win over this document.
 | `README.md` | This file — orientation and scope. |
 | `OPS-GUIDE.md` | The operations guide: topology, versions & upgrades, security hardening, resources, backup/restore, observability, routine ops calendar. |
 | `TROUBLESHOOTING-PLAYBOOKS.md` | Eight symptom-driven playbooks: memory pressure, node down / quorum loss, slow queries, import failures, disk pressure, backup/restore failures, gRPC connectivity, after-upgrade regressions. |
+| `labs/` | Three self-paced ops labs (below) — the playbooks, rehearsed on your own stack. |
+
+## Hands-on labs
+
+Reading a playbook is not the same as having run it. The `labs/` directory holds three self-paced
+labs (**~2 hours total**) that run against the 3-node docker-compose stack in the repo's
+`labs/platform/` — your own machine, your own faults, no instructor required. Do them in order;
+each assumes a healthy cluster (`make up`, `make seed`, `make verify` all green) to start.
+
+| Lab | Time | What you rehearse |
+|---|---|---|
+| `OL-1-node-failure-drill.md` | ~45 min | Kill one node of your own cluster; predict, then prove, what ONE/QUORUM/ALL each survive; watch async replication converge on evidence, not hope. |
+| `OL-2-memory-and-compression.md` | ~40 min | Baseline memory evidence, then measure what RQ-8 quantization actually trades — vector memory vs recall vs latency — and write the recommendation with a rollback path. Mechanics demo, not capacity numbers. |
+| `OL-3-slow-query-investigation.md` | ~40 min | Generate mixed load, read p50 vs p95/p99 playbook-style, enable the slow-query log *before* the incident, tune one variable, write the incident summary. |
+
+Every fault in these labs is one you inflict yourself with standard docker commands, so you always
+know the ground truth — and the same rule applies as everywhere else here: verify on your version.
 
 All examples use a fictional company, **Acme**. Adapt names, sizes, and schedules to your reality —
 but do not skip the drills.
