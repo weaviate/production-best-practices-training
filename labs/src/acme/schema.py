@@ -22,6 +22,8 @@ cluster runs with ``AUTOSCHEMA_ENABLED=false``):
 
 from __future__ import annotations
 
+import os
+
 from typing import Literal
 
 from weaviate import WeaviateClient
@@ -37,7 +39,9 @@ from weaviate.classes.config import (
 VECTOR_NAME = "content"
 VECTOR_DIM = 256
 
-COLLECTION_PRODUCT = "AcmeProduct"
+# LAB_COLLECTION overrides the benchmark target (managed-cloud mode: your
+# team collection, e.g. LabTeam03). Local labs leave it unset.
+COLLECTION_PRODUCT = os.environ.get("LAB_COLLECTION") or "AcmeProduct"
 COLLECTION_MT = "AcmeProductMT"
 COLLECTION_HFRESH = "AcmeProductHFresh"
 COLLECTION_RQ8 = "AcmeProductRQ8"  # created on demand by the Lab 2 harness
