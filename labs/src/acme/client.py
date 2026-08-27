@@ -47,6 +47,15 @@ def connect(
     API keys are still configured.
     """
     settings = settings or load_settings()
+    if settings.is_cloud:
+        # Managed Weaviate Cloud: TLS on 443 for both HTTP and gRPC.
+        return weaviate.connect_to_weaviate_cloud(
+            cluster_url=settings.weaviate_cloud_url,
+            auth_credentials=Auth.api_key(
+                api_key or settings.weaviate_api_key or settings.weaviate_api_key_root
+            ),
+            additional_config=AdditionalConfig(timeout=timeout),
+        )
     if settings.using_placeholder_keys():
         raise RuntimeError(
             "Refusing to connect with placeholder API keys. "
