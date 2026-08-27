@@ -1,0 +1,183 @@
+# ============================================================================
+# Acme labs - canonical 3-node Weaviate cluster (single host)
+#
+# Version contract (../../VERSION_MATRIX.md): server 1.38.3, images PINNED.
+# 'latest' tags are forbidden in this repository.
+#
+# WHAT THIS IS:  a real 3-voter RAFT cluster with replication factor 3,
+#                auth, RBAC, metrics, and filesystem backups - enough to run
+#                every drill in Labs 2-4.
+# WHAT THIS IS NOT: multi-AZ. All three nodes share one host, one disk, one
+#                failure domain. See labs/README.md "simulated vs real".
+#
+# Secrets: API keys are read from labs/.env (never committed). Run compose
+# with:  docker compose --env-file ../.env -f docker-compose.yaml up -d
+# (the Makefile does this for you).
+# ============================================================================
+
+name: acme
+
+x-weaviate-common: &weaviate-common
+  image: cr.weaviate.io/semitechnologies/weaviate:1.38.3   # pinned - never 'latest'
+  restart: unless-stopped
+  deploy:
+    resources:
+      limits:
+        cpus: "2"
+        memory: 2g
+  healthcheck:
+    # Health endpoints are unauthenticated by design; the image ships wget.
+    # PENDING-NETWORK: confirm wget availability against the pulled 1.38.3
+    # image (labs/PENDING_VALIDATION.md).
+    test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/v1/.well-known/ready"]
+    interval: 5s
+    timeout: 3s
+    retries: 24
+    start_period: 20s
+
+x-weaviate-env: &weaviate-env
+  # ---- persistence ----
+  PERSISTENCE_DATA_PATH: /var/lib/weaviate
+  # ---- schema is code: labs never rely on auto-schema ----
+  AUTOSCHEMA_ENABLED: "false"
+  # ---- RAFT (metadata plane): 3 voters, majority = 2 ----
+  RAFT_JOIN: weaviate-0,weaviate-1,weaviate-2
+  RAFT_BOOTSTRAP_EXPECT: "3"
+  # ---- auth: anonymous OFF (env-vars table says default true - C-7), keys on ----
+  AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "false"
+  AUTHENTICATION_APIKEY_ENABLED: "true"
+  AUTHENTICATION_APIKEY_ALLOWED_KEYS: ${WEAVIATE_API_KEY_ROOT:?set in labs/.env},${WEAVIATE_API_KEY_READONLY:?set in labs/.env}
+  AUTHENTICATION_APIKEY_USERS: root-user,readonly-user
+  # ---- RBAC: built-ins are root + viewer only; readonly-user gets 'viewer'
+  #      via the user-management API after first boot (labs/README.md) ----
+  AUTHORIZATION_RBAC_ENABLED: "true"
+  AUTHORIZATION_RBAC_ROOT_USERS: root-user
+  AUTHENTICATION_DB_USERS_ENABLED: "true"
+  # ---- observability ----
+  PROMETHEUS_MONITORING_ENABLED: "true"
+  PROMETHEUS_MONITORING_GROUP: "true"   # bounds metric cardinality across tenants
+  LOG_LEVEL: info
+  LOG_FORMAT: json
+  QUERY_SLOW_LOG_ENABLED: "true"
+  QUERY_SLOW_LOG_THRESHOLD: 500ms
+  # ---- indexing: async ON so queue-depth signals exist for Labs 2/4 ----
+  ASYNC_INDEXING: "true"
+  # ---- replica movement: production-ready in 1.38 but still gated (r3 §5) ----
+  REPLICA_MOVEMENT_ENABLED: "true"
+  # ---- backups: filesystem backend. Docs: single-node-only/not-production;
+  #      usable here ONLY because all nodes share the same named volume.
+  #      Teach S3/GCS/Azure for real clusters. ----
+  ENABLE_MODULES: backup-filesystem
+  BACKUP_FILESYSTEM_PATH: /var/lib/weaviate-backups
+  # ---- memory: ~85% of the 2g container limit; GOMAXPROCS matches the cpu limit ----
+  GOMEMLIMIT: 1740MiB
+  GOMAXPROCS: "2"
+  QUERY_DEFAULTS_LIMIT: "25"
+  DISABLE_TELEMETRY: "true"
+
+services:
+  weaviate-0:
+    <<: *weaviate-common
+    hostname: weaviate-0
+    ports:
+      - "8080:8080"     # HTTP
+      - "50051:50051"   # gRPC (required by the v4 client)
+      - "2112:2112"     # Prometheus metrics (host debugging)
+    environment:
+      <<: *weaviate-env
+      CLUSTER_HOSTNAME: weaviate-0
+      CLUSTER_GOSSIP_BIND_PORT: "7100"
+      CLUSTER_DATA_BIND_PORT: "7101"
+    volumes:
+      - weaviate-0-data:/var/lib/weaviate
+      - weaviate-backups:/var/lib/weaviate-backups
+
+  weaviate-1:
+    <<: *weaviate-common
+    hostname: weaviate-1
+    ports:
+      - "8081:8080"
+      - "50052:50051"
+      - "2113:2112"
+    environment:
+      <<: *weaviate-env
+      CLUSTER_HOSTNAME: weaviate-1
+      CLUSTER_GOSSIP_BIND_PORT: "7102"
+      CLUSTER_DATA_BIND_PORT: "7103"
+      CLUSTER_JOIN: weaviate-0:7100
+    volumes:
+      - weaviate-1-data:/var/lib/weaviate
+      - weaviate-backups:/var/lib/weaviate-backups
+    depends_on:
+      weaviate-0:
+        condition: service_started
+
+  weaviate-2:
+    <<: *weaviate-common
+    hostname: weaviate-2
+    ports:
+      - "8082:8080"
+      - "50053:50051"
+      - "2114:2112"
+    environment:
+      <<: *weaviate-env
+      CLUSTER_HOSTNAME: weaviate-2
+      CLUSTER_GOSSIP_BIND_PORT: "7104"
+      CLUSTER_DATA_BIND_PORT: "7105"
+      CLUSTER_JOIN: weaviate-0:7100
+    volumes:
+      - weaviate-2-data:/var/lib/weaviate
+      - weaviate-backups:/var/lib/weaviate-backups
+    depends_on:
+      weaviate-0:
+        condition: service_started
+
+  prometheus:
+    image: prom/prometheus:v3.4.1   # pinned
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=2d
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512m
+
+  grafana:
+    image: grafana/grafana:12.0.1   # pinned
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Lab-only login; Grafana holds no secrets. NOTE: "3000:3000" binds all
+      # host interfaces - use "127.0.0.1:3000:3000" on shared networks.
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: acme-lab
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      # Course dashboards live in the repo at operations/dashboards/.
+      - ../../operations/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512m
+
+volumes:
+  weaviate-0-data:
+  weaviate-1-data:
+  weaviate-2-data:
+  weaviate-backups:   # shared across nodes - required by backup-filesystem here
+  prometheus-data:
+  grafana-data:

@@ -1,0 +1,31 @@
+{
+  "artifacts": {
+    "ground_truth.npy": {
+      "bytes": 80128,
+      "sha256": "48b3f41261eb6a5670e9f5dc024668b06e40db13736d36fde03dab80cd8505d2"
+    },
+    "objects.jsonl.gz": {
+      "bytes": 2332975,
+      "sha256": "d47db90d041caffe93fe92c3f235c3b1591cbeb1a18b78c85625ead5bf725eee"
+    },
+    "queries.npy": {
+      "bytes": 204928,
+      "sha256": "9166591c80e63cdda2ccac9280936c5dd356c8ade6c4626b093858e8ba2ddf2a"
+    },
+    "vectors.npy": {
+      "bytes": 51200128,
+      "sha256": "d701e2b53548f31e1a96b9aa441e5692154470c3a13254eac6215935366ef0be"
+    }
+  },
+  "categories": 32,
+  "count": 50000,
+  "dim": 256,
+  "generation_seconds": 4.75,
+  "generator": "labs/data/generate.py",
+  "k": 100,
+  "n_centers": 32,
+  "n_queries": 200,
+  "n_tenants": 24,
+  "provenance": "fully synthetic; no external data sources; safe to redistribute",
+  "seed": 20260713
+}

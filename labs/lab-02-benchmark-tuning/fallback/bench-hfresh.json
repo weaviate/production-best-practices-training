@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "simulated": true,
+  "SIMULATION_NOTICE": "FALLBACK ARTIFACT - values are instructor-authored plausible numbers, NOT measured on a live cluster. Generated for the 5-minute recovery path of Lab 2. Same schema as acme.bench output.",
+  "config_fingerprint": "simulated-hfresh",
+  "config": {
+    "preset": "hfresh",
+    "k": 10,
+    "trials": 3,
+    "warmup": 40,
+    "concurrency": 8,
+    "dataset_seed": 20260713,
+    "dataset_manifest": "see labs/data/manifest.json"
+  },
+  "environment": {
+    "timestamp_utc": "2026-07-13T00:00:00+00:00",
+    "server_version": "1.38.3",
+    "expected_server_version": "1.38.3",
+    "client": "weaviate-client==4.22.0",
+    "python": "3.12",
+    "platform": "simulated",
+    "node_count": 3
+  },
+  "caveat": "Lab dataset is 50k x 256-dim on a single-host 3-node cluster; absolute numbers do NOT transfer to production scale. Compare deltas between variants, not absolute latencies.",
+  "results": [
+    {
+      "variant": "hfresh",
+      "recall_at_10": 0.968,
+      "p50_ms": 11.4,
+      "p95_ms": 24.9,
+      "p99_ms": 41.2,
+      "throughput_qps": 471.0,
+      "error_count": 0,
+      "trials": 3,
+      "queries_per_trial": 200,
+      "latencies_ms_count": 600,
+      "notes": "HFresh, searchProbe=256 (explicit - C-1), RQ built-in; disk-resident postings, centroid index in memory",
+      "extra": {}
+    }
+  ]
+}

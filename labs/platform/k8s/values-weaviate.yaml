@@ -1,0 +1,112 @@
+# ============================================================================
+# Acme labs - weaviate-helm values (chart 17.8.3) - BYOC reference
+#
+# IMPORTANT image override: chart 17.8.3 pins app version 1.38.2, but the
+# course version contract is server 1.38.3 (VERSION_MATRIX.md, contradiction
+# C-6). We therefore override image.tag explicitly. Do not remove.
+#
+# PENDING-NETWORK: key names below follow the weaviate-helm 17.8.3 values
+# schema as documented; final validation (`helm template`) requires pulling
+# the chart and is listed in labs/PENDING_VALIDATION.md.
+# ============================================================================
+
+image:
+  registry: cr.weaviate.io
+  repo: semitechnologies/weaviate
+  tag: "1.38.3"        # OVERRIDE: chart default is 1.38.2 (C-6). Pinned, never 'latest'.
+
+# 3 replicas = 3 RAFT voters; quorum 2, tolerates one node loss.
+replicas: 3
+
+# Rolling updates must never reduce serving capacity below N-0:
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+resources:
+  requests:
+    cpu: "500m"
+    memory: 2Gi
+  limits:
+    cpu: "2"
+    memory: 4Gi
+
+env:
+  AUTOSCHEMA_ENABLED: "false"
+  PROMETHEUS_MONITORING_ENABLED: "true"
+  PROMETHEUS_MONITORING_GROUP: "true"
+  ASYNC_INDEXING: "true"
+  REPLICA_MOVEMENT_ENABLED: "true"
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+  QUERY_SLOW_LOG_ENABLED: "true"
+  QUERY_SLOW_LOG_THRESHOLD: "500ms"
+  # ~85% of the container memory limit:
+  GOMEMLIMIT: "3480MiB"
+  DISABLE_TELEMETRY: "true"
+
+# --- auth: anonymous OFF, static keys from a Secret, RBAC root user ---------
+# NEVER put real keys in values files. Create the secret out of band:
+#   kubectl create secret generic weaviate-api-keys \
+#     --from-literal=AUTHENTICATION_APIKEY_ALLOWED_KEYS="$ROOT_KEY,$RO_KEY"
+authentication:
+  anonymous_access:
+    enabled: false
+  apikey:
+    enabled: true
+    # Keys sourced from an existing secret rather than inline values:
+    secretName: weaviate-api-keys
+    users:
+      - root-user
+      - readonly-user
+
+authorization:
+  rbac:
+    enabled: true
+    root_users:
+      - root-user
+
+# --- storage -----------------------------------------------------------------
+storage:
+  size: 32Gi
+  # Use a StorageClass that supports volume expansion in real deployments.
+  # storageClassName: <your-expandable-ssd-class>
+
+service:
+  type: ClusterIP
+grpcService:
+  enabled: true          # v4 client requires gRPC
+  type: ClusterIP
+
+# --- spreading across failure domains ---------------------------------------
+# Example topologySpreadConstraints: one replica per (simulated) zone.
+# NOTE (r3 §7): official docs recommend multi-AZ spread but publish no
+# canonical manifest; this example follows standard Kubernetes scheduling
+# practice. In kind the zones are labels on one physical machine - the
+# scheduling works, the fault isolation does NOT.
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        app: weaviate
+  - maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app: weaviate
+
+# PodDisruptionBudget: voluntary disruptions may never take 2 of 3 voters.
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 1
+
+# Liveness/readiness handled by the chart against /v1/.well-known/live|ready.
+
+# Modules: keep the lab lean; backups in the BYOC path should use an object
+# store (backup-s3 / backup-gcs / backup-azure), NOT backup-filesystem.
+modules: {}

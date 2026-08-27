@@ -1,0 +1,21 @@
+# Prometheus scrape config for the Acme lab cluster.
+# Weaviate exposes metrics on :2112/metrics when PROMETHEUS_MONITORING_ENABLED=true.
+global:
+  scrape_interval: 15s      # production guidance is ~30s; 15s keeps lab drills snappy
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: weaviate
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - weaviate-0:2112
+          - weaviate-1:2112
+          - weaviate-2:2112
+        labels:
+          cluster: acme-lab
+
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - localhost:9090

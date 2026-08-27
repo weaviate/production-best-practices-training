@@ -1,0 +1,20 @@
+# kind cluster for the BYOC reference path (learning fallback only - see README.md).
+# Node image pinned to Kubernetes 1.31.x per VERSION_MATRIX.md. Never 'latest'.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: acme
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.31.9
+  - role: worker
+    image: kindest/node:v1.31.9
+    labels:
+      topology.kubernetes.io/zone: sim-az-a   # SIMULATED zone label - one physical host!
+  - role: worker
+    image: kindest/node:v1.31.9
+    labels:
+      topology.kubernetes.io/zone: sim-az-b
+  - role: worker
+    image: kindest/node:v1.31.9
+    labels:
+      topology.kubernetes.io/zone: sim-az-c

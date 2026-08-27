@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "simulated": true,
+  "SIMULATION_NOTICE": "FALLBACK ARTIFACT - values are instructor-authored plausible numbers, NOT measured on a live cluster. Generated for the 5-minute recovery path of Lab 2. Same schema as acme.bench output.",
+  "config_fingerprint": "simulated-filter-strategy",
+  "config": {
+    "preset": "filter-strategy",
+    "k": 10,
+    "trials": 3,
+    "warmup": 40,
+    "concurrency": 8,
+    "dataset_seed": 20260713,
+    "dataset_manifest": "see labs/data/manifest.json"
+  },
+  "environment": {
+    "timestamp_utc": "2026-07-13T00:00:00+00:00",
+    "server_version": "1.38.3",
+    "expected_server_version": "1.38.3",
+    "client": "weaviate-client==4.22.0",
+    "python": "3.12",
+    "platform": "simulated",
+    "node_count": 3
+  },
+  "caveat": "Lab dataset is 50k x 256-dim on a single-host 3-node cluster; absolute numbers do NOT transfer to production scale. Compare deltas between variants, not absolute latencies.",
+  "results": [
+    {
+      "variant": "filter-acorn",
+      "recall_at_10": 0.981,
+      "p50_ms": 9.4,
+      "p95_ms": 21.3,
+      "p99_ms": 36.0,
+      "throughput_qps": 549.0,
+      "error_count": 0,
+      "trials": 3,
+      "queries_per_trial": 200,
+      "latencies_ms_count": 600,
+      "notes": "brand-filtered near_vector; ACORN",
+      "extra": {
+        "filter_strategy": "acorn"
+      }
+    },
+    {
+      "variant": "filter-sweeping",
+      "recall_at_10": 0.984,
+      "p50_ms": 15.8,
+      "p95_ms": 39.8,
+      "p99_ms": 66.5,
+      "throughput_qps": 331.0,
+      "error_count": 0,
+      "trials": 3,
+      "queries_per_trial": 200,
+      "latencies_ms_count": 600,
+      "notes": "brand-filtered near_vector; SWEEPING",
+      "extra": {
+        "filter_strategy": "sweeping"
+      }
+    }
+  ]
+}

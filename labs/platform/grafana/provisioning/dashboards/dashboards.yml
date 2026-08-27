@@ -1,0 +1,15 @@
+# Grafana dashboard provisioning - Acme labs.
+# Dashboards are mounted read-only from the repo: operations/dashboards/
+# (see the grafana service volumes in ../../docker-compose.yaml).
+apiVersion: 1
+
+providers:
+  - name: acme-course-dashboards
+    folder: Acme Labs
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 30
+    allowUiUpdates: true      # participants may tinker; provisioned copies win on restart
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: true

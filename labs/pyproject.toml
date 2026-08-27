@@ -1,0 +1,85 @@
+[project]
+name = "acme-labs"
+version = "1.0.0"
+description = "Hands-on lab harness for 'Advanced: Production Best Practices with Weaviate' (Acme Retail scenario)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Proprietary - course material" }
+dependencies = [
+    # Version contract: see ../VERSION_MATRIX.md. Server pin is 1.38.3;
+    # compat matrix pairs 1.38.x with client 4.22.x.
+    "weaviate-client==4.22.0",
+    "numpy>=2.0",
+    "httpx>=0.27",
+    "pydantic-settings>=2.4",
+    "rich>=13.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pytest>=8.3",
+    "pytest-timeout>=2.3",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/acme"]
+
+# ---------------------------------------------------------------------------
+# NOTE: no uv.lock is committed yet. Generating one requires network access
+# to resolve the dependency graph; this build sandbox has no egress.
+# See labs/lockfile-PENDING.md and labs/PENDING_VALIDATION.md for the exact
+# `uv lock` command to run when egress opens.
+# ---------------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests", "data"]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",    # pycodestyle / pyflakes
+    "I",              # isort
+    "UP",             # pyupgrade
+    "B",              # bugbear
+    "C4",             # comprehensions
+    "SIM",            # simplify
+    "RUF",            # ruff-specific
+    "PL",             # pylint subset
+    "BLE",            # blind excepts must carry an explicit noqa + rationale
+]
+ignore = [
+    "PLR0913",  # many-args is fine for typed config surfaces
+    "PLR2004",  # magic values are acceptable in lab checks/tests
+    "PLR0912",  # branch counts in CLI verify/bench flows
+    "PLR0915",  # statement counts in CLI verify/bench flows
+    "PLC0415",  # deliberate lazy imports: cluster-only deps stay importable offline
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = "src"
+packages = ["acme"]
+warn_unreachable = true
+warn_unused_ignores = true
+show_error_codes = true
+# weaviate-client ships inline types; numpy ships stubs. Nothing here should
+# need ignore_missing_imports once the venv is synced.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+timeout = 120
+addopts = "-ra"
+markers = [
+    "integration: requires a running lab cluster (make up); skipped when unreachable",
+]
