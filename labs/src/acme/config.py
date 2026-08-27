@@ -46,6 +46,18 @@ class LabSettings(BaseSettings):
     weaviate_api_key_root: str = Field(default=f"{PLACEHOLDER_PREFIX}-root-key")
     weaviate_api_key_readonly: str = Field(default=f"{PLACEHOLDER_PREFIX}-readonly-key")
 
+    # --- Weaviate Cloud (managed) mode -------------------------------------
+    # Set WEAVIATE_CLOUD_URL + WEAVIATE_API_KEY (your team key) to run the
+    # harness against a managed Weaviate Cloud cluster instead of the local
+    # compose stack. LAB_COLLECTION points the benchmarks at your team's
+    # collection (e.g. LabTeam03); LAB_DATASET_PROFILE=wcd regenerates the
+    # exact dataset the cloud collections were seeded with (no artifacts
+    # needed). All four are ignored in the default local mode.
+    weaviate_cloud_url: str = Field(default="")
+    weaviate_api_key: str = Field(default="")
+    lab_collection: str = Field(default="")
+    lab_dataset_profile: str = Field(default="")
+
     # --- Observability ---------------------------------------------------------
     prometheus_url: str = Field(default="http://localhost:9090")
     grafana_url: str = Field(default="http://localhost:3000")
@@ -93,8 +105,15 @@ class LabSettings(BaseSettings):
     def node_http_urls(self) -> list[str]:
         return [f"http://{self.weaviate_http_host}:{port}" for port in self.node_http_ports]
 
+    @property
+    def is_cloud(self) -> bool:
+        """True when the harness targets a managed Weaviate Cloud cluster."""
+        return bool(self.weaviate_cloud_url)
+
     def using_placeholder_keys(self) -> bool:
         """True if any API key is still a repo placeholder (refuse to seed)."""
+        if self.is_cloud and self.weaviate_api_key:
+            return False  # cloud mode authenticates with WEAVIATE_API_KEY
         return self.weaviate_api_key_root.startswith(
             PLACEHOLDER_PREFIX
         ) or self.weaviate_api_key_readonly.startswith(PLACEHOLDER_PREFIX)
@@ -110,7 +129,7 @@ def main() -> int:
     """`python -m acme.config` - print the effective (redacted) config."""
     s = load_settings()
     redacted = s.model_dump()
-    for key in ("weaviate_api_key_root", "weaviate_api_key_readonly"):
+    for key in ("weaviate_api_key_root", "weaviate_api_key_readonly", "weaviate_api_key"):
         val = redacted[key]
         redacted[key] = val[:4] + "…" if len(val) > 4 else "…"
     width = max(len(k) for k in redacted)
