@@ -1,4 +1,4 @@
-# Production Best Practices with Weaviate — Training
+# Production Best Practices with Weaviate — Training <img alt='Weaviate logo' src='https://weaviate.io/img/site/weaviate-logo-light.png' width='148' align='right' />
 
 Materials for the instructor-led course **Advanced: Production Best Practices with Weaviate** (2 days × 4 hours or one full day), plus a self-study operations module for on-premise deployments. Customer-agnostic: the running example throughout is **Acme**, a fictional company.
 
