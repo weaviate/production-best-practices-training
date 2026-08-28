@@ -73,7 +73,9 @@ def _stream_objects(
                 )
                 break
     # failed_objects reset when a new batching context opens - copy them now.
-    failures = [f"uuid={fo.object_.uuid} err={fo.message}" for fo in list(batch.failed_objects)]
+    failures = [
+        f"uuid={fo.object_.uuid} err={fo.message}" for fo in list(collection.batch.failed_objects)
+    ]
     return failures
 
 
